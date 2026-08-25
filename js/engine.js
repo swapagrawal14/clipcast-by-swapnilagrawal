@@ -179,11 +179,16 @@ AC.engine = (() => {
     }
   }
 
-  /* ── block geometry: x/y = CENTER fractions, w/h = size fractions ── */
+  /* ── block geometry: x/y = CENTER fractions, w/h = size fractions ──
+     left = x·CW − w·CW/2  (same for y/h). Spec, templates, inspector and
+     JSON all document this; only the renderer used to disagree. */
   function getRect(p, b) {
+    const w = (b.w ?? 0) * p.canvasW;
+    const h = (b.h ?? 0) * p.canvasH;
     return {
-      x: b.x * p.canvasW, y: b.y * p.canvasH,
-      w: b.w * p.canvasW, h: b.h * p.canvasH,
+      x: b.x * p.canvasW - w / 2,
+      y: b.y * p.canvasH - h / 2,
+      w, h,
     };
   }
 
@@ -414,19 +419,20 @@ AC.engine = (() => {
     ctx.font = fontCss(b.font, 700, px);
     const tw = ctx.measureText(text).width;
     const chipW = tw + px * 1.4, chipH = px * 1.8;
+    const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
     ctx.save();
     if (b.chip) {
       ctx.fillStyle = 'rgba(8,11,17,0.62)';
-      roundRect(ctx, rect.x + rect.w / 2 - chipW / 2, rect.y - chipH / 2, chipW, chipH, chipH / 2);
+      roundRect(ctx, cx - chipW / 2, cy - chipH / 2, chipW, chipH, chipH / 2);
       ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.14)';
       ctx.lineWidth = 1;
-      roundRect(ctx, rect.x + rect.w / 2 - chipW / 2, rect.y - chipH / 2, chipW, chipH, chipH / 2);
+      roundRect(ctx, cx - chipW / 2, cy - chipH / 2, chipW, chipH, chipH / 2);
       ctx.stroke();
     }
     ctx.fillStyle = b.color || '#f8fafc';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(text, rect.x + rect.w / 2, rect.y + px * 0.06);
+    ctx.fillText(text, cx, cy + px * 0.06);
     ctx.restore();
   }
 

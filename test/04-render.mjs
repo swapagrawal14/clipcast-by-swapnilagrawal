@@ -187,6 +187,72 @@ export async function run() {
   check('karaoke captions fit within frame margins (no edge overflow)',
     edge.leftHit === 0 && edge.rightHit === 0, JSON.stringify(edge));
 
+  /* ── text-block x/y is CENTER (spec R6): x=0.5, w=0.84 → left≈8%, right≈92% ── */
+  const centerGeom = await page.evaluate(() => {
+    const r = AC.engine.getRect({ canvasW: 1000, canvasH: 2000 }, { x: 0.5, y: 0.14, w: 0.84, h: 0.1 });
+    return { x: r.x, y: r.y, w: r.w, h: r.h, right: r.x + r.w };
+  });
+  check('getRect: x=0.5,w=0.84 → left=80, right=920 on 1000-wide canvas',
+    Math.abs(centerGeom.x - 80) < 0.5 && Math.abs(centerGeom.right - 920) < 0.5
+    && Math.abs(centerGeom.y - (0.14 * 2000 - 100)) < 0.5,
+    JSON.stringify(centerGeom));
+
+  const aspects = ['9:16', '1:1', '16:9', '4:5'];
+  const aspectHits = {};
+  for (const a of aspects) {
+    aspectHits[a] = await page.evaluate(async (a) => {
+      AC.state.setAspect(a);
+      AC.state.mutate((p) => {
+        p.captions.style.mode = 'none';
+        p.captions.cues = [];
+        /* paint the full block box (progress track = 100% of w) so pixels
+           match getRect, not glyph padding. Title uses the same getRect. */
+        p.blocks = [{
+          id: 'b1', type: 'progress', visible: true,
+          x: 0.5, y: 0.5, w: 0.84, h: 0.08,
+          color: '#ffffff', track: '#ffffff', height: 0.04,
+          rounded: false, glow: false,
+        }, {
+          id: 't1', type: 'title', visible: true,
+          x: 0.5, y: 0.2, w: 0.84, h: 0.1,
+          text: 'CENTERED TITLE', font: 'inter', size: 0.05, color: '#ffffff',
+          bold: true, caps: true, align: 'center', outline: 0, shadow: false,
+        }];
+        p.bg = { type: 'solid', c1: '#000000', c2: '#000000', angle: 0 };
+      });
+      const p = AC.state.current();
+      const titleRect = AC.engine.getRect(p, p.blocks.find((b) => b.type === 'title'));
+      const W = 400, H = Math.round(400 * p.canvasH / p.canvasW);
+      const b64 = AC._debug.renderFrame(0.5, W, H);
+      const img = await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.src = b64; });
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+      const d = x.getImageData(0, 0, W, H).data;
+      let minX = W, maxX = 0;
+      const y0 = Math.floor(H * 0.42), y1 = Math.ceil(H * 0.58);
+      for (let y = y0; y < y1; y++) {
+        for (let px = 0; px < W; px++) {
+          const i = (y * W + px) * 4;
+          if (d[i] + d[i + 1] + d[i + 2] > 180) {
+            if (px < minX) minX = px;
+            if (px > maxX) maxX = px;
+          }
+        }
+      }
+      return {
+        min: minX / W, max: maxX / W,
+        titleLeft: titleRect.x / p.canvasW, titleRight: (titleRect.x + titleRect.w) / p.canvasW,
+      };
+    }, a);
+  }
+  const allOk = aspects.every((a) => {
+    const h = aspectHits[a];
+    return Math.abs(h.min - 0.08) <= 0.02 && Math.abs(h.max - 0.92) <= 0.02
+      && Math.abs(h.titleLeft - 0.08) <= 0.005 && Math.abs(h.titleRight - 0.92) <= 0.005;
+  });
+  check('block at x=0.5,w=0.84 spans ≈8%→92% on every aspect (±2%; title getRect too)',
+    allOk, JSON.stringify(aspectHits));
+
   check('zero errors in render section', errors.length === 0, errors.join(' | ').slice(0, 300));
   await closePage(browser);
 }
