@@ -133,6 +133,7 @@ html[data-theme='light'] .btn-primary { color: #fff; }
 .tmpl-card:hover { border-color: var(--accent); transform: translateY(-1px); }
 .tmpl-card .thumb { height: 74px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 .tmpl-card .thumb .mini { font-weight: 900; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.5); font-size: 12px; letter-spacing: .5px; }
+.tmpl-card .thumb .mini svg, .tmpl-big .thumb .mini svg { width: 44px; height: 26px; display: block; margin: 0 auto; }
 .tmpl-card .meta { padding: 7px 9px; }
 .tmpl-card .meta b { display: block; font-size: 12px; margin-bottom: 1px; }
 .tmpl-card .meta span { font-size: 10.5px; color: var(--text-faint); }

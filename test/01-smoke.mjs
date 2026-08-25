@@ -22,6 +22,20 @@ export async function run() {
   check('sample project built (audio + trim + cues + blocks)',
     p0.trimEnd > 7 && p0.cues === 4 && p0.blocks >= 4, JSON.stringify(p0));
 
+  /* the drop-hint overlay must hide once audio is loaded (it used to sit on
+     top of the preview and eat pointer events) */
+  const hintHidden = await page.evaluate(() => document.getElementById('emptyHint').classList.contains('hidden'));
+  check('empty-hint overlay hides once audio loads', hintHidden);
+
+  /* no exotic unicode in template thumbs / block icons (∿ ⟨⟩ ₳ ⏱ ▬ 🖼 are
+     missing from the embedded fonts → .notdef tofu boxes) */
+  const exoticGlyphs = await page.evaluate(() => {
+    const bad = ['∿', '⟨', '⟩', '₳', '⏱', '▬', '🖼'];
+    return Array.from(document.querySelectorAll('#tmplGrid .mini, #welcomeTmplGrid .mini, .b-ico'))
+      .some((el) => bad.some((ch) => el.textContent.includes(ch)));
+  });
+  check('template thumbs + block icons use SVG / safe glyphs only', !exoticGlyphs);
+
   /* stage canvas renders non-blank */
   await page.waitForTimeout(600);
   const blank = await page.evaluate(() => {

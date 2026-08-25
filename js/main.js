@@ -31,6 +31,14 @@ AC.main = (() => {
     document.getElementById('aspectSelect').value = p ? p.aspect : '9:16';
     document.getElementById('btnUndo').disabled = !AC.state.canUndo();
     document.getElementById('btnRedo').disabled = !AC.state.canRedo();
+    syncEmptyHint();
+  }
+
+  /* the "drop an audio file" overlay must never sit on top of a live preview */
+  function syncEmptyHint() {
+    const p = AC.state.current();
+    const hasAudio = !!(p && p.audio && p.audio.assetId);
+    document.getElementById('emptyHint').classList.toggle('hidden', hasAudio);
   }
 
   /* ── project manager modal ── */

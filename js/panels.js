@@ -35,7 +35,7 @@ AC.panels = (() => {
         },
       });
       const thumb = U.el('div', { class: 'thumb', style: 'background:' + t.css });
-      thumb.appendChild(U.el('div', { class: 'mini' }, '⟨∿⟩'));
+      thumb.appendChild(U.el('div', { class: 'mini', html: ICONS.wave }));
       card.appendChild(thumb);
       const meta = U.el('div', { class: 'meta' });
       meta.appendChild(U.el('b', {}, t.name));
@@ -46,13 +46,21 @@ AC.panels = (() => {
   }
 
   /* ═══════════ blocks list ═══════════ */
+  /* Inline SVG icons — exotic unicode (∿ ⟨⟩ ₳ ⏱ ▬ 🖼) is missing from the
+     embedded OFL fonts and renders as .notdef tofu boxes. */
+  const ICONS = {
+    wave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13 L5.2 7 L8.8 18 L12.2 9 L15.4 16 L18.6 8 L22 13"/></svg>',
+    cover: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="m21 15.5-4.2-4.2L6 21.8"/></svg>',
+    progress: '<svg viewBox="0 0 24 24"><rect x="3" y="9.5" width="18" height="5" rx="2.5" fill="currentColor" opacity="0.3"/><rect x="3" y="9.5" width="11" height="5" rx="2.5" fill="currentColor"/></svg>',
+    timer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.6 2.6M9.5 2.5h5"/></svg>',
+  };
   const BLOCK_META = {
-    cover: { label: 'Cover art', sub: 'image, rounded, Ken Burns', ico: '🖼' },
+    cover: { label: 'Cover art', sub: 'image, rounded, Ken Burns', ico: ICONS.cover },
     title: { label: 'Title', sub: 'headline text', ico: 'T' },
-    subtitle: { label: 'Subtitle / @handle', sub: 'secondary text', ico: '₳' },
-    waveform: { label: 'Waveform', sub: 'the animated audio visual', ico: '∿' },
-    progress: { label: 'Progress bar', sub: 'playback progress', ico: '▬' },
-    timer: { label: 'Timer chip', sub: 'elapsed / remaining', ico: '⏱' },
+    subtitle: { label: 'Subtitle / @handle', sub: 'secondary text', ico: '@' },
+    waveform: { label: 'Waveform', sub: 'the animated audio visual', ico: ICONS.wave },
+    progress: { label: 'Progress bar', sub: 'playback progress', ico: ICONS.progress },
+    timer: { label: 'Timer chip', sub: 'elapsed / remaining', ico: ICONS.timer },
     watermark: { label: 'Watermark line', sub: 'optional text', ico: '©' },
   };
 
@@ -63,7 +71,7 @@ AC.panels = (() => {
     for (const type of Object.keys(BLOCK_META)) {
       const meta = BLOCK_META[type];
       const row = U.el('div', { class: 'block-row' });
-      const ico = U.el('div', { class: 'b-ico' }, meta.ico);
+      const ico = U.el('div', { class: 'b-ico', html: meta.ico });
       row.appendChild(ico);
       const name = U.el('div', { class: 'b-name' }, meta.label);
       name.appendChild(U.el('small', {}, meta.sub));
@@ -247,7 +255,7 @@ AC.panels = (() => {
     }
     const meta = BLOCK_META[block.type] || { label: block.type };
     title.textContent = meta.label;
-    ico.textContent = meta.ico;
+    ico.innerHTML = meta.ico;
     body.innerHTML = '';
     _inspBuilding = true;
 
@@ -431,5 +439,5 @@ AC.panels = (() => {
 
   function renderAll() { renderTemplates(); renderBlocks(); renderWFChips(); renderBG(); buildInspector(); }
 
-  return { init, renderAll, buildInspector };
+  return { init, renderAll, buildInspector, ICONS };
 })();

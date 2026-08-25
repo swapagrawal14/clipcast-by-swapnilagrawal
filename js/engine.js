@@ -265,13 +265,24 @@ AC.engine = (() => {
   function drawTextBlock(ctx, p, b, t) {
     const rect = getRect(p, b);
     const H = p.canvasH;
-    const px = Math.max(6, b.size * H);
+    let px = Math.max(6, b.size * H);
     const text = U.safeText(b.caps ? b.text : b.text, b.font);
     if (!text.trim()) return;
-    ctx.font = fontCss(b.font, b.bold ? 800 : 400, px);
+    const fontW = () => fontCss(b.font, b.bold ? 800 : 400, px);
+    ctx.font = fontW();
     ctx.textBaseline = 'middle';
     const maxW = Math.max(40, rect.w - px * 0.12);
-    const lines = wrapText(ctx, text, maxW);
+    let lines = wrapText(ctx, text, maxW);
+    /* fit-to-width safeguard: scale down unbreakable lines (single long word) */
+    {
+      let fitW = 0;
+      for (const l of lines) fitW = Math.max(fitW, ctx.measureText(l).width);
+      if (fitW > maxW && fitW > 0) {
+        px = Math.max(6, px * (maxW / fitW));
+        ctx.font = fontW();
+        lines = wrapText(ctx, text, maxW);
+      }
+    }
     const lh = px * 1.24;
     const totalH = lines.length * lh;
     let y0 = rect.y + rect.h / 2 - totalH / 2 + lh / 2;
@@ -333,13 +344,29 @@ AC.engine = (() => {
         ctx.drawImage(img, dx, dy, dw, dh);
       }
     } else {
-      ctx.fillStyle = 'rgba(148,163,184,0.15)';
-      ctx.font = `${Math.round(rect.w * 0.16)}px Inter, sans-serif`;
+      /* vector placeholder icon — no emoji (missing from embedded fonts → tofu) */
+      const icW = rect.w * 0.22, icH = rect.h * 0.16;
+      const icX = rect.x + rect.w / 2 - icW / 2;
+      const icY = rect.y + rect.h / 2 - icH / 2 - rect.h * 0.06;
+      ctx.strokeStyle = 'rgba(148,163,184,0.6)';
+      ctx.fillStyle = 'rgba(148,163,184,0.6)';
+      ctx.lineWidth = Math.max(1.5, rect.w * 0.012);
+      roundRect(ctx, icX, icY, icW, icH, icW * 0.14);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(icX + icW * 0.3, icY + icH * 0.34, icW * 0.09, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(icX + icW * 0.08, icY + icH * 0.86);
+      ctx.lineTo(icX + icW * 0.38, icY + icH * 0.44);
+      ctx.lineTo(icX + icW * 0.6, icY + icH * 0.68);
+      ctx.lineTo(icX + icW * 0.78, icY + icH * 0.5);
+      ctx.lineTo(icX + icW * 0.92, icY + icH * 0.86);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.font = `600 ${Math.round(rect.w * 0.045)}px Inter, sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(148,163,184,0.5)';
-      ctx.fillText('🖼️', rect.x + rect.w / 2, rect.y + rect.h / 2 - rect.h * 0.1);
-      ctx.font = `600 ${Math.round(rect.w * 0.05)}px Inter, sans-serif`;
-      ctx.fillText('upload cover', rect.x + rect.w / 2, rect.y + rect.h / 2 + rect.h * 0.16);
+      ctx.fillText('upload cover', rect.x + rect.w / 2, rect.y + rect.h / 2 + rect.h * 0.18);
     }
     ctx.restore();
   }
@@ -502,12 +529,22 @@ AC.engine = (() => {
     };
 
     if (cs.mode === 'phrase') {
-      const px = Math.max(12, cs.size * H);
+      let px = Math.max(12, cs.size * H);
       const text = U.safeText(cs.caps ? cue.text.toUpperCase() : cue.text, cs.font);
       if (!text.trim()) return;
       ctx.font = fontCss(cs.font, 800, px);
       ctx.textBaseline = 'middle';
-      const lines = wrapText(ctx, text, maxW);
+      let lines = wrapText(ctx, text, maxW);
+      /* fit-to-width (covers unbreakable single words) */
+      {
+        let longest = 0;
+        for (const l of lines) longest = Math.max(longest, ctx.measureText(l).width);
+        if (longest > maxW && longest > 0) {
+          px = Math.max(12, px * (maxW / longest));
+          ctx.font = fontCss(cs.font, 800, px);
+          lines = wrapText(ctx, text, maxW);
+        }
+      }
       const lh = px * 1.3;
       const totalH = lines.length * lh;
       let y0 = yBase - totalH / 2 + lh / 2;
@@ -532,7 +569,15 @@ AC.engine = (() => {
       if (wi < 0) return;
       const maxN = Math.max(1, Math.min(3, cs.maxWords || 3));
       const group = ws.slice(wi, wi + maxN);
-      const px = Math.max(16, cs.size * H * 1.75);
+      let px = Math.max(16, cs.size * H * 1.75);
+      /* fit-to-width for long words */
+      {
+        ctx.font = fontCss(cs.font, 900, px);
+        const wMax = W * 0.9;
+        let longest = 0;
+        for (const wd of group) longest = Math.max(longest, ctx.measureText(U.safeText(cs.caps ? wd.w.toUpperCase() : wd.w, cs.font)).width);
+        if (longest > wMax && longest > 0) px = Math.max(16, px * (wMax / longest));
+      }
       const lh = px * 1.22;
       const totalH = group.length * lh;
       let y = yBase - totalH / 2 + lh / 2;
@@ -561,12 +606,25 @@ AC.engine = (() => {
     }
 
     /* karaoke (default) */
-    const px = Math.max(12, cs.size * H);
+    let px = Math.max(12, cs.size * H);
     const ws = AC.captions.cueWords(cue);
     const wi = AC.captions.wordIndexAt(cue, t);
     const maxWords = Math.max(1, cs.maxWords || 4);
     const lines = [];
     for (let i = 0; i < ws.length; i += maxWords) lines.push(ws.slice(i, i + maxWords));
+    /* fit-to-width: scale down so the longest line never exceeds the safe frame */
+    {
+      ctx.font = fontCss(cs.font, 800, px);
+      const sp0 = ctx.measureText(' ').width;
+      let longest = 0;
+      for (const line of lines) {
+        let w = 0;
+        for (const wd of line) w += ctx.measureText(U.safeText(cs.caps ? wd.w.toUpperCase() : wd.w, cs.font)).width;
+        w += sp0 * (line.length - 1);
+        if (w > longest) longest = w;
+      }
+      if (longest > maxW && longest > 0) px = Math.max(12, px * (maxW / longest));
+    }
     const lh = px * 1.28;
     const totalH = lines.length * lh;
     let y = yBase - totalH / 2 + lh / 2;

@@ -17,7 +17,7 @@ AC.tour = (() => {
         onclick: () => startSample(id),
       });
       const thumb = U.el('div', { class: 'thumb', style: 'background:' + t.css });
-      thumb.appendChild(U.el('div', { class: 'mini' }, '∿'));
+      thumb.appendChild(U.el('div', { class: 'mini', html: AC.panels.ICONS.wave }));
       card.appendChild(thumb);
       const meta = U.el('div', { class: 'meta' });
       meta.appendChild(U.el('b', {}, t.name));

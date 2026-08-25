@@ -154,6 +154,39 @@ export async function run() {
     colors.karaTeal > 50 && colors.karaWhite > 50, JSON.stringify(colors));
   check('hormozi template renders coral accent', colors.hormoCoral > 100, JSON.stringify(colors));
 
+  /* ── captions must never touch the frame edges (fit-to-width) ── */
+  const edge = await page.evaluate(async () => {
+    AC.state.mutate((p) => {
+      p.captions.cues = [{ start: 0, end: 3, text: 'Hello and welcome to the very first ClipCast sample' }];
+      p.captions.style.mode = 'karaoke';
+      p.captions.style.maxWords = 4;
+      p.captions.style.size = 0.068;
+      p.captions.style.font = 'inter';
+    });
+    const W = 540, H = 960;
+    const b64 = AC._debug.renderFrame(1.0, W, H);
+    const img = await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.src = b64; });
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    x.drawImage(img, 0, 0);
+    const d = x.getImageData(0, 0, W, H).data;
+    const isText = (i) => {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      return (Math.abs(r - 0xf1) < 45 && Math.abs(g - 0xf5) < 45 && Math.abs(b - 0xf9) < 45)   /* #f1f5f9 */
+        || (Math.abs(r - 0x2d) < 45 && Math.abs(g - 0xd4) < 45 && Math.abs(b - 0xbf) < 45);    /* #2dd4bf */
+    };
+    let leftHit = 0, rightHit = 0;
+    const y0 = Math.floor(H * 0.60), y1 = Math.floor(H * 0.96);
+    for (let y = y0; y < y1; y += 2) {
+      for (let px = 0; px < 8; px++) if (isText((y * W + px) * 4)) leftHit++;
+      for (let px = W - 8; px < W; px++) if (isText((y * W + px) * 4)) rightHit++;
+    }
+    return { leftHit, rightHit };
+  });
+  check('karaoke captions fit within frame margins (no edge overflow)',
+    edge.leftHit === 0 && edge.rightHit === 0, JSON.stringify(edge));
+
   check('zero errors in render section', errors.length === 0, errors.join(' | ').slice(0, 300));
   await closePage(browser);
 }
