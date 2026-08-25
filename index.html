@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipCast — Audiogram Maker</title>
+<meta name="description" content="ClipCast turns a podcast clip into a shareable animated audiogram video. 100% in your browser — no sign-up, no watermark, no uploads. Free forever.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0e14'/%3E%3Cpath d='M5 17c2.5-7 5-7 7.5 0s5 7 7.5 0 5-7 7.5 0' stroke='%232dd4bf' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='27' cy='21' r='3' fill='%23fb7185'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/clipcast.css">
+</head>
+<body>
+
+<!-- ═══════════ TOP BAR ═══════════ -->
+<header id="topbar" role="banner">
+  <div class="brand" title="ClipCast — audiogram maker">
+    <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent-soft)"/><path d="M5 17c2.5-7 5-7 7.5 0s5 7 7.5 0 5-7 7.5 0" stroke="var(--accent)" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="27" cy="21" r="3" fill="var(--coral)"/></svg>
+    ClipCast
+  </div>
+  <span id="dirtyDot" title="Unsaved changes"></span>
+  <span id="projectName">—</span>
+  <span class="topsep"></span>
+  <button id="btnNew" class="btn" title="New project (welcome screen)">New</button>
+  <button id="btnProjects" class="btn" title="Open a saved project">Projects</button>
+  <button id="btnImportJson" class="btn" title="Import a .json audiogram spec / project">Import JSON</button>
+  <button id="btnExportJson" class="btn" title="Download this project as .json (audio included)">Download JSON</button>
+  <span class="topsep"></span>
+  <button id="btnUndo" class="icon-btn" aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+  </button>
+  <button id="btnRedo" class="icon-btn" aria-label="Redo (Ctrl+Y)" title="Redo (Ctrl+Y)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>
+  </button>
+  <span class="topsep"></span>
+  <label class="f-row" style="margin:0;gap:6px" title="Output aspect ratio">
+    <span class="muted" style="font-size:11px;font-weight:700">ASPECT</span>
+    <select id="aspectSelect" class="input" style="width:86px;padding:4px 8px" aria-label="Aspect ratio">
+      <option value="9:16">9:16 Reels</option>
+      <option value="1:1">1:1 Square</option>
+      <option value="4:5">4:5 Portrait</option>
+      <option value="16:9">16:9 Wide</option>
+    </select>
+  </label>
+  <span class="spacer"></span>
+  <button id="btnTheme" class="icon-btn" aria-label="Toggle dark / light theme" title="Toggle theme">
+    <svg id="icoMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg id="icoSun" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+  </button>
+  <button id="btnHelp" class="icon-btn" aria-label="Help and shortcuts" title="Help (?)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+  </button>
+  <button id="btnExport" class="btn btn-primary" title="Export video / GIF / PNG (Ctrl+E)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+    Export
+  </button>
+</header>
+
+<!-- ═══════════ LEFT PANEL ═══════════ -->
+<aside id="left" aria-label="Design panels">
+  <nav class="tabs" role="tablist" aria-label="Design panels">
+    <button class="tab-btn active" data-tab="templates" role="tab" aria-selected="true">Templates</button>
+    <button class="tab-btn" data-tab="blocks" role="tab" aria-selected="false">Blocks</button>
+    <button class="tab-btn" data-tab="style" role="tab" aria-selected="false">Style</button>
+    <button class="tab-btn" data-tab="bg" role="tab" aria-selected="false">Background</button>
+  </nav>
+
+  <div class="panel-body" id="panel-templates">
+    <div class="sec-h">Start from a template</div>
+    <div class="tmpl-grid" id="tmplGrid"></div>
+    <p class="muted" style="font-size:11.5px;line-height:1.6;margin-top:10px">Templates set the background, waveform style, caption mode and block layout. You can change everything afterwards.</p>
+  </div>
+
+  <div class="panel-body hidden" id="panel-blocks">
+    <div class="sec-h">Canvas blocks <span class="hint">drag them on the preview</span></div>
+    <div id="blockList"></div>
+    <p class="muted" style="font-size:11.5px;line-height:1.6;margin-top:10px">Blocks snap to guides while dragging. Select a block to edit it in the right-hand inspector.</p>
+  </div>
+
+  <div class="panel-body hidden" id="panel-style">
+    <div class="sec-h">Waveform style</div>
+    <div class="wf-grid" id="wfGrid"></div>
+    <div id="wfControls" style="margin-top:12px"></div>
+
+    <div class="sec-h" style="margin-top:18px">Caption style</div>
+    <div id="capStyleControls"></div>
+  </div>
+
+  <div class="panel-body hidden" id="panel-bg">
+    <div class="sec-h">Background presets</div>
+    <div class="sw-grid" id="bgGrid"></div>
+    <div class="sec-h" style="margin-top:16px">Custom</div>
+    <div class="grid2">
+      <div class="f-row"><label>Color 1</label><input type="color" id="bgC1" aria-label="Background color 1"></div>
+      <div class="f-row"><label>Color 2</label><input type="color" id="bgC2" aria-label="Background color 2"></div>
+    </div>
+    <div class="f-row"><label>Angle</label><input type="range" id="bgAngle" min="0" max="360" value="135" aria-label="Gradient angle"><span class="val" id="bgAngleVal">135°</span></div>
+    <div class="f-row">
+      <label>Image</label>
+      <button class="btn btn-sm" id="btnBgImage">Upload…</button>
+      <button class="btn btn-sm" id="btnBgImageClear" title="Remove background image">✕</button>
+    </div>
+    <input type="file" id="fileBgImage" accept="image/*" class="hidden" aria-hidden="true">
+  </div>
+</aside>
+
+<!-- ═══════════ STAGE ═══════════ -->
+<main id="center" aria-label="Preview stage">
+  <canvas id="stageCanvas" aria-label="Audiogram preview" role="img"></canvas>
+  <div id="playOverlay" class="hidden" role="button" aria-label="Play preview (Space)" title="Play (Space)">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72c0 .8.87 1.3 1.56.88l10.9-6.86a1.04 1.04 0 0 0 0-1.76L9.56 4.26A1.04 1.04 0 0 0 8 5.14z"/></svg>
+  </div>
+  <div id="emptyHint">
+    <div class="big">🎙️</div>
+    <h2>Drop an audio file to start</h2>
+    <p>MP3, WAV, M4A, OGG, AAC or FLAC. Everything stays on this device — no upload, no account, no watermark. Ever.</p>
+    <button class="btn btn-primary" id="btnPickAudio">Choose audio file</button>
+  </div>
+  <div id="stageTools">
+    <button class="icon-btn" id="btnFit" title="Zoom to fit" aria-label="Zoom to fit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+    </button>
+    <button class="icon-btn" id="btnSafe" title="Safe-area overlay" aria-label="Toggle safe area overlay">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="7.2" y="7.2" width="9.6" height="9.6" rx="1"/></svg>
+    </button>
+    <button class="icon-btn" id="btnGrid" title="Grid overlay" aria-label="Toggle grid overlay">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+    </button>
+  </div>
+  <div id="stageInfo">
+    <span>⏱ <b id="infoTime">0:00.0</b> / <b id="infoDur">0:00.0</b></span>
+    <span>🔊 <b id="infoAudio">—</b></span>
+  </div>
+</main>
+
+<!-- ═══════════ RIGHT INSPECTOR ═══════════ -->
+<aside id="right" aria-label="Inspector">
+  <div id="inspHeader"><span class="b-ico" id="inspIco"></span><span id="inspTitle">Inspector</span></div>
+  <div id="inspBody">
+    <div id="inspEmpty">
+      <b>Nothing selected.</b><br><br>
+      Click a block on the preview to edit it here — position, size, text, font, colors.<br><br>
+      No blocks yet? Add them from the <b>Blocks</b> tab (left) or pick a template.
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════ BOTTOM ═══════════ -->
+<footer id="bottom">
+  <nav class="tabs" role="tablist" aria-label="Bottom panels">
+    <button class="tab-btn active" data-tab="b:trim" role="tab" aria-selected="true">Trim &amp; Waveform</button>
+    <button class="tab-btn" data-tab="b:captions" role="tab" aria-selected="false">Captions <span id="cueCount" class="muted">(0)</span></button>
+  </nav>
+
+  <div id="panel-trim">
+    <canvas id="trimCanvas" aria-label="Trim waveform timeline" role="slider" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></canvas>
+    <div class="trim-row">
+      <div class="f-row"><label>Trim start</label><input type="number" id="trimStart" class="input" step="0.1" min="0" style="width:80px" aria-label="Trim start seconds"><span class="val">s</span></div>
+      <div class="f-row"><label>Trim end</label><input type="number" id="trimEnd" class="input" step="0.1" min="0" style="width:80px" aria-label="Trim end seconds"><span class="val">s</span></div>
+      <button class="btn btn-sm" id="btnTrimToPlayhead" title="Trim end = playhead (T)">T: trim to playhead</button>
+      <button class="btn btn-sm" id="btnTrimReset" title="Reset trim to full audio">Reset trim</button>
+      <span class="spacer"></span>
+      <span class="trim-legend"><span><span class="dot" style="background:var(--accent)"></span>in clip</span><span><span class="dot" style="background:var(--bg5)"></span>trimmed away</span></span>
+      <label class="f-row" style="margin:0" title="Loop the trimmed region while previewing"><span class="muted" style="font-size:11px;font-weight:700">LOOP</span><span class="switch"><input type="checkbox" id="loopPreview"><span class="track"></span></span></label>
+      <button class="btn btn-sm" id="btnPlayTrim" title="Play / pause trimmed region (Space)">▶ Preview</button>
+    </div>
+  </div>
+
+  <div id="panel-captions" class="hidden">
+    <div class="cap-toolbar">
+      <button class="btn btn-sm" id="btnAddCue">+ Cue</button>
+      <button class="btn btn-sm" id="btnPasteTranscript" title="Paste plain transcript — words are auto-distributed across the clip">Paste transcript</button>
+      <button class="btn btn-sm" id="btnImportSrt">Import .srt / .vtt</button>
+      <input type="file" id="fileSrt" accept=".srt,.vtt,text/plain" class="hidden" aria-hidden="true">
+      <span class="sep"></span>
+      <label class="f-row" style="margin:0"><span class="muted" style="font-size:11px;font-weight:700">MODE</span>
+        <select id="capMode" class="input" style="width:130px" aria-label="Caption display mode">
+          <option value="karaoke">Word karaoke</option>
+          <option value="phrase">Phrase fade</option>
+          <option value="bigword">Big word pop</option>
+          <option value="none">None</option>
+        </select>
+      </label>
+      <label class="f-row" style="margin:0"><span class="muted" style="font-size:11px;font-weight:700">POSITION</span>
+        <select id="capPos" class="input" style="width:110px" aria-label="Caption position">
+          <option value="top">Top third</option>
+          <option value="middle">Middle third</option>
+          <option value="bottom">Bottom third</option>
+        </select>
+      </label>
+      <span class="grow"></span>
+      <span class="muted" id="capHint" style="font-size:11px"></span>
+    </div>
+    <div id="cueList" role="list" aria-label="Caption cues"></div>
+  </div>
+</footer>
+
+<!-- ═══════════ MODALS ═══════════ -->
+
+<div id="welcomeModal" class="modal-back hidden" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+  <div class="modal" style="max-width:640px">
+    <div class="welcome-hero">
+      <svg width="52" height="52" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent-soft)"/><path d="M5 17c2.5-7 5-7 7.5 0s5 7 7.5 0 5-7 7.5 0" stroke="var(--accent)" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="27" cy="21" r="3" fill="var(--coral)"/></svg>
+      <div class="tag">Audiogram maker</div>
+      <h1 id="welcomeTitle">Welcome to ClipCast</h1>
+      <p class="sub" style="max-width:480px;margin:0 auto">Turn a podcast or voice clip into a shareable animated video — waveform, captions, cover art — ready for Reels, Shorts, TikTok and YouTube.</p>
+    </div>
+    <div class="privacy-note">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <div><b>100% private, free, no watermark.</b> Your audio, images and projects never leave this device — everything runs locally in your browser and is stored only in your own browser storage. No account, no upload, no watermarked exports.</div>
+    </div>
+    <div class="sec-h">Start with a sample — or blank</div>
+    <div class="tmpl-big-grid" id="welcomeTmplGrid"></div>
+    <div class="actions">
+      <button class="btn" id="btnBlank">Blank canvas</button>
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="btnWelcomeAudio">🎙️ I'll bring my own audio</button>
+    </div>
+  </div>
+</div>
+
+<div id="projectModal" class="modal-back hidden" role="dialog" aria-modal="true" aria-labelledby="projectTitle">
+  <div class="modal">
+    <h2 id="projectTitle">Your projects</h2>
+    <p class="sub">Saved locally in this browser (localStorage + IndexedDB). Projects autosave as you work.</p>
+    <div id="projList"></div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnProjNew">+ New project</button>
+      <span class="grow"></span>
+      <button class="btn" id="btnProjClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="exportModal" class="modal-back hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+  <div class="modal">
+    <h2 id="exportTitle">Export</h2>
+    <p class="sub">Exports exactly the trimmed region. Nothing is uploaded — rendering happens on your device.</p>
+    <div id="expSetup">
+      <div class="exp-row">
+        <div class="f-row"><label>Format</label>
+          <select id="expFmt" class="input" aria-label="Export format"></select>
+        </div>
+        <div class="f-row"><label>FPS</label>
+          <select id="expFps" class="input" aria-label="Frame rate">
+            <option value="24">24 fps</option>
+            <option value="30" selected>30 fps</option>
+          </select>
+        </div>
+      </div>
+      <div class="exp-row">
+        <div class="f-row"><label>Quality</label>
+          <select id="expQuality" class="input" aria-label="Quality">
+            <option value="low">Low (~2.5 Mbps)</option>
+            <option value="medium" selected>Medium (~6 Mbps)</option>
+            <option value="high">High (~12 Mbps)</option>
+          </select>
+        </div>
+        <div class="f-row"><label>Scale</label>
+          <select id="expScale" class="input" aria-label="Resolution scale">
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1" selected>100%</option>
+            <option value="1.5">150%</option>
+            <option value="2">200%</option>
+          </select>
+        </div>
+      </div>
+      <div class="exp-row">
+        <div class="f-row"><label>Clip length</label><span class="val" id="expDur" style="min-width:80px">—</span></div>
+        <div class="f-row"><label>Output size</label><span class="val" id="expDims" style="min-width:80px">—</span></div>
+      </div>
+      <div class="f-row"><label>Include audio</label><span class="switch"><input type="checkbox" id="expAudio" checked><span class="track"></span></span></div>
+      <div class="exp-est" id="expEstimate"></div>
+      <div class="actions">
+        <button class="btn" id="expCancel">Cancel</button>
+        <span class="grow"></span>
+        <button class="btn btn-primary" id="expStart">Start export</button>
+      </div>
+    </div>
+    <div id="expProgress" class="hidden">
+      <div id="expStatus">Preparing…</div>
+      <div class="count-num hidden" id="expCount"></div>
+      <div id="expBarWrap"><div id="expBar"></div></div>
+      <div id="expEta">…</div>
+      <div class="actions">
+        <span class="grow"></span>
+        <button class="btn btn-coral" id="expCancelRun">Cancel</button>
+      </div>
+    </div>
+    <div id="expDone" class="hidden">
+      <p class="sub" id="expDoneInfo" style="font-weight:700;color:var(--ok)">✓ Done!</p>
+      <div class="actions">
+        <button class="btn" id="expAgain">Export another</button>
+        <span class="grow"></span>
+        <button class="btn btn-primary" id="expDownload">⬇ Download</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="transcriptModal" class="modal-back hidden" role="dialog" aria-modal="true" aria-labelledby="transcriptTitle">
+  <div class="modal">
+    <h2 id="transcriptTitle">Paste transcript</h2>
+    <p class="sub">Words are distributed evenly across the trimmed clip. Per-word timing is interpolated inside each cue (honest: even splits, not real alignment).</p>
+    <div class="f-row"><label>Words per line (cue)</label><input type="number" id="trWordsPerLine" class="input" min="1" max="20" value="4" style="width:70px" aria-label="Words per line"></div>
+    <textarea id="transcriptText" class="input" rows="6" placeholder="Paste the spoken words here, in order…" aria-label="Transcript text"></textarea>
+    <div class="actions">
+      <button class="btn" id="trCancel">Cancel</button>
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="trOk">Create cues</button>
+    </div>
+  </div>
+</div>
+
+<div id="helpModal" class="modal-back hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="modal" style="max-width:520px">
+    <h2 id="helpTitle">Shortcuts &amp; tips</h2>
+    <p class="sub">Everything runs locally — your audio and projects never leave this device.</p>
+    <div class="help-grid">
+      <div class="row"><span>Play / pause</span><span><kbd class="shortcut">Space</kbd></span></div>
+      <div class="row"><span>Seek ±1 s (hold Shift: ±5 s)</span><span><kbd class="shortcut">←</kbd> <kbd class="shortcut">→</kbd></span></div>
+      <div class="row"><span>Trim end = playhead</span><span><kbd class="shortcut">T</kbd></span></div>
+      <div class="row"><span>Split caption cue at playhead</span><span><kbd class="shortcut">S</kbd></span></div>
+      <div class="row"><span>Undo / Redo</span><span><kbd class="shortcut">Ctrl+Z</kbd> <kbd class="shortcut">Ctrl+Y</kbd></span></div>
+      <div class="row"><span>Download project JSON</span><span><kbd class="shortcut">Ctrl+S</kbd></span></div>
+      <div class="row"><span>Export</span><span><kbd class="shortcut">Ctrl+E</kbd></span></div>
+      <div class="row"><span>Delete selected block</span><span><kbd class="shortcut">Del</kbd></span></div>
+    </div>
+    <div class="actions">
+      <span class="grow"></span>
+      <button class="btn btn-primary" id="helpClose">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div id="smallScreen" role="dialog" aria-modal="true">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+  <h2>ClipCast needs a wider screen</h2>
+  <p style="max-width:380px;line-height:1.6;color:var(--text-dim)">The editor is designed for screens wider than 900&nbsp;px. You can continue anyway, but panels will overlap.</p>
+  <button class="btn btn-primary" id="btnSmallContinue">Continue anyway</button>
+</div>
+
+<!-- hidden file inputs -->
+<input type="file" id="fileAudio" accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac" class="hidden" aria-hidden="true">
+<input type="file" id="fileBgm" accept="audio/*" class="hidden" aria-hidden="true">
+<input type="file" id="fileCover" accept="image/*" class="hidden" aria-hidden="true">
+<input type="file" id="fileJson" accept=".json,application/json" class="hidden" aria-hidden="true">
+
+<div id="toasts" aria-live="polite"></div>
+
+<script src="js/util.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/waveform.js"></script>
+<script src="js/captions.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/state.js"></script>
+<script src="js/stage.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/exporter.js"></script>
+<script src="js/jsonio.js"></script>
+<script src="js/tour.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
