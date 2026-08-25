@@ -348,7 +348,8 @@ AC.state = (() => {
 
   function init() {
     loadMeta();
-    const lastId = localStorage.getItem(LS_CUR);
+    let lastId = null;
+    try { lastId = localStorage.getItem(LS_CUR); } catch (e) { /* storage blocked */ }
     let p = null;
     if (lastId) p = loadProject(lastId);
     if (!p) p = newProject('Untitled audiogram', 'podcast-minimal');

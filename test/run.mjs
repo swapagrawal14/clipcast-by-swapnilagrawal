@@ -13,6 +13,7 @@ const sections = [
   ['gifpng', () => import('./06-gif-png.mjs')],
   ['json', () => import('./07-json.mjs')],
   ['polish', () => import('./08-polish.mjs')],
+  ['sandbox', () => import('./09-sandbox.mjs')],
 ];
 
 for (const [name, load] of sections) {

@@ -4,51 +4,71 @@ AC.assets = (() => {
   'use strict';
   const U = AC.util;
 
-  /* ── IndexedDB — one store 'assets': id → Blob ── */
+  /* ── IndexedDB — one store 'assets': id → Blob ──
+     Falls back to an in-memory map when IndexedDB is unavailable (e.g. the
+     sandboxed iframe of an embedded preview) — the app still works, it just
+     won't persist across reloads in that case. */
   let _db = null;
+  let _dbMode = 'idb';      /* 'idb' | 'mem' */
+  const _mem = new Map();
   function openDB() {
+    if (_dbMode === 'mem') return Promise.resolve(null);
     if (_db) return Promise.resolve(_db);
-    return new Promise((res, rej) => {
-      const req = indexedDB.open('clipcast', 1);
+    return new Promise((res) => {
+      let req;
+      try { req = indexedDB.open('clipcast', 1); }
+      catch (e) { _dbMode = 'mem'; res(null); return; }
       req.onupgradeneeded = () => {
         const db = req.result;
         if (!db.objectStoreNames.contains('assets')) db.createObjectStore('assets');
       };
       req.onsuccess = () => { _db = req.result; res(_db); };
-      req.onerror = () => rej(req.error);
+      req.onerror = () => { _dbMode = 'mem'; console.warn('[clipcast] IndexedDB unavailable — using in-memory storage', req.error); res(null); };
     });
   }
   function idbPut(id, blob) {
-    return openDB().then((db) => new Promise((res, rej) => {
-      const tx = db.transaction('assets', 'readwrite');
-      tx.objectStore('assets').put(blob, id);
-      tx.oncomplete = () => res(id);
-      tx.onerror = () => rej(tx.error);
-    }));
+    return openDB().then((db) => {
+      if (!db) { _mem.set(id, blob); return id; }
+      return new Promise((res, rej) => {
+        const tx = db.transaction('assets', 'readwrite');
+        tx.objectStore('assets').put(blob, id);
+        tx.oncomplete = () => res(id);
+        tx.onerror = () => rej(tx.error);
+      });
+    });
   }
   function idbGet(id) {
-    return openDB().then((db) => new Promise((res, rej) => {
-      const tx = db.transaction('assets', 'readonly');
-      const rq = tx.objectStore('assets').get(id);
-      rq.onsuccess = () => res(rq.result || null);
-      rq.onerror = () => rej(rq.error);
-    }));
+    return openDB().then((db) => {
+      if (!db) return Promise.resolve(_mem.get(id) || null);
+      return new Promise((res, rej) => {
+        const tx = db.transaction('assets', 'readonly');
+        const rq = tx.objectStore('assets').get(id);
+        rq.onsuccess = () => res(rq.result || null);
+        rq.onerror = () => rej(rq.error);
+      });
+    });
   }
   function idbDel(id) {
-    return openDB().then((db) => new Promise((res, rej) => {
-      const tx = db.transaction('assets', 'readwrite');
-      tx.objectStore('assets').delete(id);
-      tx.oncomplete = () => res();
-      tx.onerror = () => rej(tx.error);
-    }));
+    return openDB().then((db) => {
+      if (!db) { _mem.delete(id); return Promise.resolve(); }
+      return new Promise((res, rej) => {
+        const tx = db.transaction('assets', 'readwrite');
+        tx.objectStore('assets').delete(id);
+        tx.oncomplete = () => res();
+        tx.onerror = () => rej(tx.error);
+      });
+    });
   }
   function idbKeys() {
-    return openDB().then((db) => new Promise((res, rej) => {
-      const tx = db.transaction('assets', 'readonly');
-      const rq = tx.objectStore('assets').getAllKeys();
-      rq.onsuccess = () => res(rq.result || []);
-      rq.onerror = () => rej(rq.error);
-    }));
+    return openDB().then((db) => {
+      if (!db) return Promise.resolve(Array.from(_mem.keys()));
+      return new Promise((res, rej) => {
+        const tx = db.transaction('assets', 'readonly');
+        const rq = tx.objectStore('assets').getAllKeys();
+        rq.onsuccess = () => res(rq.result || []);
+        rq.onerror = () => rej(rq.error);
+      });
+    });
   }
 
   const storeBlob = (blob) => { const id = U.uid('a'); return idbPut(id, blob).then(() => id); };
